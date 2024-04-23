@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\User;
-use SebastianBergmann\Type\FalseType;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller {
     public function signup(Request $request) {
@@ -15,11 +16,13 @@ class UserController extends Controller {
                 return response()->json(['error' => 'Your IP address is blacklisted.'], 403);
             }
 
+            $userTypes = explode(',', env('USER_TYPES'));
+
             $validatedData = $request->validate([
-                'first_name' => 'required|string',
-                'last_name' => 'required|string',
+                'first_name' => 'required|string|regex:/^[a-zA-Z0-9]+$/',
+                'last_name' => 'required|string|regex:/^[a-zA-Z0-9]+$/',
                 'email' => 'required|email|unique:users',
-                'user_type' => 'required|in:student,teacher,parent,private_tutor',
+                'user_type' => ['required', Rule::in($userTypes)],
                 'password' => 'required|min:4',
             ]);
         }
@@ -57,6 +60,10 @@ class UserController extends Controller {
         return TRUE;
     }
 
+    /**
+     * @param User $user
+     * @return void
+     */
     private function sendWelcomeEmail(User $user) {
         // Send welcome email to user
         switch ($user->user_type) {
@@ -77,9 +84,13 @@ class UserController extends Controller {
                 break;
         }
 
-        // mail($user->email, 'Welcome to our platform', $message);
+        // mail($user->email, 'Welcome to our Twinkl platform', $message);
     }
 
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
     public function getUsers(Request $request) {
         try {
             $users = User::all();
